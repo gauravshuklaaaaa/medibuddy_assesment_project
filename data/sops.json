@@ -56,7 +56,12 @@
       "workout",
       "exercise",
       "marathon",
-      "cardio"
+      "cardio",
+      "outdoor",
+      "outdoor activity",
+      "outside",
+      "outing",
+      "general"
     ],
     "rule_type": "threshold",
     "description": "UV index reaches extreme levels (8.0+) between 11:00 and 16:00 during outdoor workouts.",
@@ -109,7 +114,12 @@
       "football",
       "cricket",
       "tennis",
-      "hiking"
+      "hiking",
+      "outdoor",
+      "outdoor activity",
+      "outside",
+      "outing",
+      "general"
     ],
     "rule_type": "threshold",
     "description": "Substantial rainfall causing slick roads, poor visibility, and mud slip hazards.",
@@ -134,7 +144,12 @@
       "jogging",
       "walking",
       "sports",
-      "workout"
+      "workout",
+      "outdoor",
+      "outdoor activity",
+      "outside",
+      "outing",
+      "general"
     ],
     "rule_type": "threshold",
     "description": "Ambient heat between 32\u00b0C and 38\u00b0C imposing thermal stress on cardiovascular systems.",
@@ -323,7 +338,11 @@
       "bbq",
       "lawn",
       "stroll",
-      "day_out"
+      "day_out",
+      "outdoor",
+      "outdoor activity",
+      "outside",
+      "general"
     ],
     "rule_type": "fuzzy_composite",
     "description": "Multi-variable qualitative outdoor comfort assessment for picnics and leisure outings without single-variable cliff thresholds.",
@@ -364,7 +383,12 @@
       "walking",
       "sports",
       "biking",
-      "two_wheeler"
+      "two_wheeler",
+      "outdoor",
+      "outdoor activity",
+      "outside",
+      "outing",
+      "general"
     ],
     "rule_type": "baseline_favorable",
     "description": "Ambient weather conditions fall within benign, safe ranges for outdoor physical activities.",

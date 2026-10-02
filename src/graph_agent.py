@@ -30,15 +30,23 @@ class WeatherBotState(TypedDict, total=False):
     status: str
 
 
-def extract_entities(query: str, current_loc: Optional[str], current_act: Optional[str]) -> Tuple[Optional[str], Optional[str], str]:
+def extract_entities(
+    query: str,
+    current_loc: Optional[str],
+    current_act: Optional[str],
+    current_time: str,
+    prev_status: Optional[str],
+    weather_service: WeatherService
+) -> Tuple[Optional[str], Optional[str], str]:
     """
-    Extracts location, activity, and time horizon from text with word-boundary awareness,
+    Extracts location, activity, and time horizon from text with dynamic geocoding awareness,
     retaining prior turn session context when not explicitly overridden.
     """
-    q_lower = query.lower()
+    q_lower = query.lower().strip()
+    q_clean = query.strip().strip("?.!,'\"")
 
     # 1. Time Horizon Extraction
-    time_horizon = "current"
+    time_horizon = current_time if current_time else "current"
     if any(re.search(r'\b' + re.escape(w) + r'\b', q_lower) for w in ["evening", "tonight", "night", "later", "this evening"]):
         time_horizon = "evening"
     elif any(re.search(r'\b' + re.escape(w) + r'\b', q_lower) for w in ["tomorrow morning", "morning"]):
@@ -46,7 +54,7 @@ def extract_entities(query: str, current_loc: Optional[str], current_act: Option
     elif any(re.search(r'\b' + re.escape(w) + r'\b', q_lower) for w in ["tomorrow", "next day"]):
         time_horizon = "tomorrow"
 
-    # 2. Activity Extraction using word boundaries to prevent substring pollution (e.g. 'pet' in 'competition')
+    # 2. Activity Extraction using word boundaries
     activity = None
     activity_keywords = {
         "cycling": ["cycle", "cycling", "bike", "biking", "bicycle", "two-wheeler", "two wheeler", "scooty", "scooter", "motorcycle", "riding"],
@@ -64,38 +72,53 @@ def extract_entities(query: str, current_loc: Optional[str], current_act: Option
             activity = act_key
             break
 
-    # If activity not mentioned, check if query contains indoor activities
     if not activity:
         if any(re.search(r'\b' + re.escape(w) + r'\b', q_lower) for w in ["chess", "carrom", "board game", "reading", "read a book", "indoor"]):
             activity = "indoor_activity"
 
-    # Fall back to session memory if available and not overridden
-    if not activity and current_act:
-        activity = current_act
+    # Retain prior activity if available, or default to general outdoor activity
+    if not activity:
+        activity = current_act if current_act else "outdoor activity"
 
     # 3. Location Extraction
     location = None
-    known_cities = [
-        "bhopal", "mumbai", "delhi", "bengaluru", "bangalore", "chennai", "kolkata",
-        "hyderabad", "pune", "ahmedabad", "jaipur", "lucknow", "chandigarh", "patna",
-        "surat", "nagpur", "indore", "thane", "visakhapatnam", "vadodara", "ghaziabad",
-        "london", "new york", "berlin", "tokyo", "singapore", "paris", "sydney"
-    ]
 
-    for c in known_cities:
-        if re.search(r'\b' + re.escape(c) + r'\b', q_lower):
-            location = c.title()
-            break
+    # Step A: Direct short response when awaiting location or short answer (1-3 words)
+    if prev_status == "awaiting_location" or len(q_clean.split()) <= 3:
+        cand = q_clean
+        for prep in ["in ", "at ", "near ", "for ", "around ", "to "]:
+            if cand.lower().startswith(prep):
+                cand = cand[len(prep):].strip()
+        cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow)\b', '', cand, flags=re.IGNORECASE).strip()
+        if cand and cand.lower() not in ["yes", "no", "ok", "okay", "sure", "why", "what", "run", "cycle", "walk", "evening", "morning"]:
+            res, _ = weather_service.geocode_city(cand)
+            if res:
+                location = res["name"]
 
+    # Step B: Check all preposition candidates: "in <X>", "at <X>", "near <X>", "around <X>"
     if not location:
-        # Check prepositions: in / at / near / around <City> (supports alphanumeric candidate)
-        match = re.search(r'\b(?:in|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE)
-        if match:
-            candidate = match.group(1).strip()
-            if candidate.lower() not in ["the morning", "the evening", "the park", "my area", "work", "office", "a park", "the car"]:
-                location = candidate
+        matches = list(re.finditer(r'\b(?:in|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
+        for m in reversed(matches):
+            cand = m.group(1).strip()
+            cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow|the\s+park|work|office)\b', '', cand, flags=re.IGNORECASE).strip()
+            if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
+                res, _ = weather_service.geocode_city(cand)
+                if res:
+                    location = res["name"]
+                    break
 
-    # Fall back to session memory location if available
+    # Step C: Fallback to match candidate without geocoding (for invalid location test like AbcDefGhi999Z)
+    if not location:
+        matches = list(re.finditer(r'\b(?:in|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
+        for m in reversed(matches):
+            cand = m.group(1).strip()
+            cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow)\b', '', cand, flags=re.IGNORECASE).strip()
+            if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
+                if cand.lower() not in ["the morning", "the evening", "the park", "my area", "work", "office", "a park", "the car", "1 pm"]:
+                    location = cand
+                    break
+
+    # Step D: Fall back to session memory location if available
     if not location and current_loc:
         location = current_loc
 
@@ -163,8 +186,17 @@ class WeatherAdvisoryGraph:
         query = state.get("user_query", "")
         prev_loc = state.get("location")
         prev_act = state.get("activity")
+        prev_time = state.get("time_horizon", "current")
+        prev_status = state.get("status")
 
-        loc, act, time_hz = extract_entities(query, prev_loc, prev_act)
+        loc, act, time_hz = extract_entities(
+            query=query,
+            current_loc=prev_loc,
+            current_act=prev_act,
+            current_time=prev_time,
+            prev_status=prev_status,
+            weather_service=self.weather_service
+        )
         return {
             "location": loc,
             "activity": act or "outdoor activity",
@@ -188,7 +220,7 @@ class WeatherAdvisoryGraph:
         if geo_err or not loc_data:
             return {
                 "weather_data": None,
-                "weather_error": geo_err or "Unknown geocoding failure.",
+                "weather_error": geo_err or f"Could not resolve location '{location}'.",
                 "status": "weather_failed"
             }
 
