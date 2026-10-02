@@ -18,7 +18,6 @@ class AdvisoryComposer:
     """
 
     def __init__(self, model_name: str = "qwen/qwen3.8-27b"):
-        # Check environment first, then fallback to Streamlit Cloud secrets if available
         self.groq_key = os.getenv("GROQ_API_KEY")
         if not self.groq_key:
             try:
@@ -69,22 +68,24 @@ class AdvisoryComposer:
         mandatory_text = primary_sop["mandatory_guidance"]
         rationale = primary_sop.get("rationale", "")
 
+        # Clean markdown formatting with explicit paragraph separation
         verified_metrics_block = (
-            f"📍 **Verified Live Weather for {loc}** ({target_desc}):\n"
-            f"• Condition: {condition}\n"
-            f"• Temperature: {temp}°C\n"
-            f"• Precipitation: {precip} mm (Probability: {precip_prob}%)\n"
-            f"• Wind Speed: {wind} km/h (Gusts: {gusts} km/h)\n"
-            f"• UV Index: {uv}\n"
+            f"### 📍 Verified Live Weather for {loc} ({target_desc})\n\n"
+            f"- **Condition:** {condition}\n"
+            f"- **Temperature:** {temp}°C\n"
+            f"- **Precipitation:** {precip} mm (Probability: {precip_prob}%)\n"
+            f"- **Wind Speed:** {wind} km/h (Gusts: {gusts} km/h)\n"
+            f"- **UV Index:** {uv}\n\n"
+            f"---\n"
         )
 
         severity_badges = {
-            "CRITICAL": "🚨 **CRITICAL ALERT**",
-            "HIGH": "⚠️ **HIGH SEVERITY ADVISORY**",
-            "MEDIUM": "⚡ **MODERATE CAUTION**",
-            "LOW": "ℹ️ **STANDARD ADVISORY / FAVORABLE**"
+            "CRITICAL": "### 🚨 CRITICAL ALERT",
+            "HIGH": "### ⚠️ HIGH SEVERITY ADVISORY",
+            "MEDIUM": "### ⚡ MODERATE CAUTION",
+            "LOW": "### ℹ️ STANDARD ADVISORY / FAVORABLE"
         }
-        badge = severity_badges.get(severity, f"**{severity} ADVISORY**")
+        badge = severity_badges.get(severity, f"### {severity} ADVISORY")
 
         secondary_text = ""
         if secondary_sops:
@@ -143,28 +144,28 @@ class AdvisoryComposer:
         if not llm_body:
             if primary_sop.get("lead_with_system_alert"):
                 llm_body = (
-                    f"**System Warning:** {mandatory_text}\n\n"
-                    f"**Specific Context for '{activity.title()}':** Due to active regional monsoon depression / cyclonic conditions, "
+                    f"**System Warning:**  \n{mandatory_text}\n\n"
+                    f"**Specific Context for '{activity.title()}':**  \nDue to active regional monsoon depression / cyclonic conditions, "
                     f"this activity is not safe under current observed parameters ({precip} mm/h rain, {wind} km/h wind)."
                 )
             else:
                 llm_body = (
-                    f"**Official Safety Guidance:**\n{mandatory_text}\n\n"
-                    f"**Policy Trigger Rationale:** {rationale}"
+                    f"**Official Safety Guidance:**  \n{mandatory_text}\n\n"
+                    f"**Policy Trigger Rationale:**  \n{rationale}"
                 )
 
         citation_footer = (
-            f"\n\n---\n"
-            f"📋 **Policy Citation:** `{sop_id}` ({sop_title})\n"
+            f"\n\n---\n\n"
+            f"📋 **Policy Citation:** `{sop_id}` ({sop_title})  \n"
             f"🤖 *Synthesized via {self.model_name} with strict Open-Meteo fact grounding & clinical SOP enforcement.*"
         )
 
         secondary_block = ""
         if secondary_sops:
-            secondary_block = "\n\n**Additional Concurrent Policies Triggered:**\n"
+            secondary_block = "\n\n**Additional Concurrent Policies Triggered:**\n\n"
             for sec in secondary_sops:
                 secondary_block += (
-                    f"• [{sec['id']} - {sec['title']}] ({sec['severity']}): {sec['mandatory_guidance']}\n"
+                    f"- **[{sec['id']} - {sec['title']}]** ({sec['severity']}): {sec['mandatory_guidance']}\n"
                 )
 
         final_response = f"{verified_metrics_block}\n{badge}\n\n{llm_body}{secondary_block}{citation_footer}"
@@ -187,7 +188,7 @@ class AdvisoryComposer:
         loc_info = f" for '{location_query}'" if location_query else ""
         return (
             f"⚠️ **Weather Data Unavailable**\n\n"
-            f"Unable to retrieve verified live weather observations{loc_info}.\n"
+            f"Unable to retrieve verified live weather observations{loc_info}.\n\n"
             f"**Reason:** {error_message}\n\n"
             f"In accordance with MediBuddy policy, safety recommendations must never be generated from "
             f"assumed or recalled forecasts. Because live meteorological metrics could not be confirmed, "

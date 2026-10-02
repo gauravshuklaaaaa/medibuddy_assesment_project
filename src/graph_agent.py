@@ -83,33 +83,56 @@ def extract_entities(
     # 3. Location Extraction
     location = None
 
-    # Step A: Direct short response when awaiting location or short answer (1-3 words)
-    if prev_status == "awaiting_location" or len(q_clean.split()) <= 3:
-        cand = q_clean
-        for prep in ["in ", "at ", "near ", "for ", "around ", "to "]:
-            if cand.lower().startswith(prep):
-                cand = cand[len(prep):].strip()
-        cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow)\b', '', cand, flags=re.IGNORECASE).strip()
-        if cand and cand.lower() not in ["yes", "no", "ok", "okay", "sure", "why", "what", "run", "cycle", "walk", "evening", "morning"]:
+    # Step A: Preposition match takes highest priority ("in <City>", "of <City>", "for <City>", "at <City>", "near <City>", "around <City>")
+    matches = list(re.finditer(r'\b(?:in|of|for|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
+    for m in reversed(matches):
+        cand = m.group(1).strip()
+        cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|evening|morning|tomorrow|the\s+park|work|office)\b', '', cand, flags=re.IGNORECASE).strip()
+        if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
             res, _ = weather_service.geocode_city(cand)
             if res:
                 location = res["name"]
+                break
 
-    # Step B: Check all preposition candidates: "in <X>", "at <X>", "near <X>", "around <X>"
+    # Step B: Direct short response when awaiting location or short query (e.g. "weather of thailand", "of betul", "agra")
     if not location:
-        matches = list(re.finditer(r'\b(?:in|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
-        for m in reversed(matches):
-            cand = m.group(1).strip()
-            cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow|the\s+park|work|office)\b', '', cand, flags=re.IGNORECASE).strip()
-            if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
-                res, _ = weather_service.geocode_city(cand)
-                if res:
-                    location = res["name"]
-                    break
+        prefixes = [
+            "weather of ", "weather in ", "weather for ", "weather at ",
+            "forecast of ", "forecast in ", "forecast for ",
+            "climate of ", "temperature of ", "temp of ",
+            "what about ", "how about ", "is it safe in ", "is it safe at ",
+            "how is the weather in ", "how is the weather of ", "how is the weather for ",
+            "tell me about ", "check ", "for ", "in ", "of ", "at ", "near ", "around ", "to "
+        ]
+        candidate = q_clean
+        for p in prefixes:
+            if candidate.lower().startswith(p):
+                candidate = candidate[len(p):].strip()
+                break
+        candidate = re.sub(r'\b(?:today|tonight|now|this\s+evening|evening|morning|tomorrow)\b', '', candidate, flags=re.IGNORECASE).strip()
+        if candidate and candidate.lower() not in ["yes", "no", "ok", "okay", "sure", "why", "what", "run", "cycle", "walk"]:
+            res, _ = weather_service.geocode_city(candidate)
+            if res:
+                location = res["name"]
 
-    # Step C: Fallback to match candidate without geocoding (for invalid location test like AbcDefGhi999Z)
+    # Step C: Check individual non-stopwords against geocoding
     if not location:
-        matches = list(re.finditer(r'\b(?:in|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
+        words = [w.strip() for w in re.split(r'[\s,]+', q_clean) if len(w) > 2]
+        stopwords = {
+            "weather", "forecast", "climate", "temperature", "safe", "outside", "outdoor", "activity",
+            "today", "tonight", "morning", "evening", "what", "about", "how", "tell", "check", "please",
+            "can", "should", "would", "like", "cycle", "cycling", "bike", "biking", "run", "running",
+            "jog", "jogging", "walk", "walking", "stroll", "ride", "riding", "scooty", "scooter"
+        }
+        candidates_from_words = [w for w in words if w.lower() not in stopwords]
+        for w in candidates_from_words:
+            res, _ = weather_service.geocode_city(w)
+            if res:
+                location = res["name"]
+                break
+
+    # Step D: Fallback for unresolvable location test cases (like AbcDefGhi999Z)
+    if not location:
         for m in reversed(matches):
             cand = m.group(1).strip()
             cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow)\b', '', cand, flags=re.IGNORECASE).strip()
@@ -118,7 +141,7 @@ def extract_entities(
                     location = cand
                     break
 
-    # Step D: Fall back to session memory location if available
+    # Step E: Fall back to session memory location if available
     if not location and current_loc:
         location = current_loc
 
