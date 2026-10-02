@@ -55,7 +55,7 @@ class NumberedCanvas(canvas.Canvas):
 
 
 def generate_pdf():
-    pdf_path = "medibuddy_project_report.pdf"
+    pdf_path = "medibuddy_assesment_project_report.pdf"
     doc = SimpleDocTemplate(
         pdf_path,
         pagesize=letter,
@@ -279,14 +279,14 @@ def generate_pdf():
     # Deployment Guide Section
     story.append(Paragraph("6. Setup, Execution, and Deployment Instructions", h1_style))
     story.append(Paragraph("<b>Local Setup & Verification:</b>", h2_style))
-    story.append(Paragraph("1. Clone repository: <code>git clone https://github.com/gauravshuklaaaaa/medibuddy_project.git</code>", bullet_style))
+    story.append(Paragraph("1. Clone repository: <code>git clone https://github.com/gauravshuklaaaaa/medibuddy_assesment_project.git</code>", bullet_style))
     story.append(Paragraph("2. Install dependencies: <code>pip install -r requirements.txt</code>", bullet_style))
     story.append(Paragraph("3. Launch chat frontend: <code>streamlit run app.py</code>", bullet_style))
     story.append(Paragraph("4. Execute automated evaluation suite: <code>python evals/run_evals.py</code>", bullet_style))
 
     story.append(Paragraph("<b>Streamlit Cloud Deployment:</b>", h2_style))
     story.append(Paragraph("1. Navigate to <a href='https://share.streamlit.io'>share.streamlit.io</a> and connect your GitHub account.", bullet_style))
-    story.append(Paragraph("2. Select repository: <code>gauravshuklaaaaa/medibuddy_project</code> (Branch: <code>main</code>).", bullet_style))
+    story.append(Paragraph("2. Select repository: <code>gauravshuklaaaaa/medibuddy_assesment_project</code> (Branch: <code>main</code>).", bullet_style))
     story.append(Paragraph("3. Set Main file path: <code>app.py</code> and click <b>Deploy</b>. No API key is required to run live.", bullet_style))
 
     doc.build(story, canvasmaker=NumberedCanvas)

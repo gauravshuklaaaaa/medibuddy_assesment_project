@@ -140,8 +140,8 @@ python evals/run_evals.py
 ### Installation:
 ```bash
 # 1. Clone repository
-git clone https://github.com/gauravshuklaaaaa/medibuddy_project.git
-cd medibuddy_project
+git clone https://github.com/gauravshuklaaaaa/medibuddy_assesment_project.git
+cd medibuddy_assesment_project
 
 # 2. Install dependencies
 pip install -r requirements.txt
@@ -157,10 +157,10 @@ streamlit run app.py
 
 ## 7. Streamlit Cloud Deployment
 
-1. Push your repository to GitHub: `https://github.com/gauravshuklaaaaa/medibuddy_project`.
+1. Push your repository to GitHub: `https://github.com/gauravshuklaaaaa/medibuddy_assesment_project`.
 2. Visit [share.streamlit.io](https://share.streamlit.io/) and log in with GitHub.
 3. Click **"New App"** and configure:
-   - **Repository:** `gauravshuklaaaaa/medibuddy_project`
+   - **Repository:** `gauravshuklaaaaa/medibuddy_assesment_project`
    - **Branch:** `main`
    - **Main file path:** `app.py`
 4. Click **Deploy**. Because Open-Meteo requires no API key, the app will deploy and run live immediately!
@@ -170,7 +170,7 @@ streamlit run app.py
 ## 8. PDF Project Write-Up
 
 A comprehensive 3-page executive report has been compiled to:
-`medibuddy_project_report.pdf`
+`medibuddy_assesment_project_report.pdf`
 
 To regenerate the PDF report at any time:
 ```bash
