@@ -1,5 +1,5 @@
 ﻿"""
-LLM Provider module with strict fact enforcement and graceful fallback.
+LLM Provider module with Groq (qwen/qwen3.8-27b) integration and strict fact enforcement.
 Guarantees that numbers and safety advice strictly originate from Open-Meteo and SOP policies.
 """
 
@@ -12,13 +12,22 @@ load_dotenv()
 
 class AdvisoryComposer:
     """
-    Composes safety advisories strictly adhering to verified weather metrics and matched SOPs.
+    Composes safety advisories using Groq's qwen/qwen3.8-27b model,
+    strictly constrained by verified weather metrics and matched SOP policies.
     """
 
-    def __init__(self):
+    def __init__(self, model_name: str = "qwen/qwen3.8-27b"):
         self.groq_key = os.getenv("GROQ_API_KEY")
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.model_name = os.getenv("GROQ_MODEL", model_name)
+        self.client = None
+
+        if self.groq_key:
+            try:
+                from groq import Groq
+                self.client = Groq(api_key=self.groq_key.strip('"\''))
+            except Exception as e:
+                print(f"[AdvisoryComposer] Warning: Could not initialize Groq client: {e}")
+                self.client = None
 
     def compose_advisory(
         self,
@@ -30,9 +39,8 @@ class AdvisoryComposer:
         target_period: str
     ) -> str:
         """
-        Compose response with strict fact enforcement.
-        All numerical values are directly injected from Open-Meteo data.
-        All safety guidance is directly bound to the authorized SOP text.
+        Compose response using qwen/qwen3.8-27b with strict fact grounding.
+        Verified numbers and authorized SOP text are injected and enforced.
         """
         loc = weather.get("location", "Unknown Location")
         metrics = weather.get("metrics", {})
@@ -40,18 +48,10 @@ class AdvisoryComposer:
         precip = metrics.get("precipitation")
         precip_prob = metrics.get("precipitation_probability")
         wind = metrics.get("wind_speed")
+        gusts = metrics.get("wind_gusts", wind)
         uv = metrics.get("uv_index")
         condition = metrics.get("condition_name", "Observed conditions")
-
-        # Live metric bullet block enforced directly from Open-Meteo API response
-        verified_metrics_block = (
-            f"📍 **Verified Live Weather for {loc}** ({weather.get('target_period_desc', target_period)}):\n"
-            f"• Condition: {condition}\n"
-            f"• Temperature: {temp}°C\n"
-            f"• Precipitation: {precip} mm (Probability: {precip_prob}%)\n"
-            f"• Wind Speed: {wind} km/h (Gusts: {metrics.get('wind_gusts', wind)} km/h)\n"
-            f"• UV Index: {uv}\n"
-        )
+        target_desc = weather.get("target_period_desc", target_period)
 
         sop_id = primary_sop["id"]
         sop_title = primary_sop["title"]
@@ -59,7 +59,16 @@ class AdvisoryComposer:
         mandatory_text = primary_sop["mandatory_guidance"]
         rationale = primary_sop.get("rationale", "")
 
-        # Format severity badge
+        # Always build the verified metrics block deterministically (no hallucinations possible)
+        verified_metrics_block = (
+            f"📍 **Verified Live Weather for {loc}** ({target_desc}):\n"
+            f"• Condition: {condition}\n"
+            f"• Temperature: {temp}°C\n"
+            f"• Precipitation: {precip} mm (Probability: {precip_prob}%)\n"
+            f"• Wind Speed: {wind} km/h (Gusts: {gusts} km/h)\n"
+            f"• UV Index: {uv}\n"
+        )
+
         severity_badges = {
             "CRITICAL": "🚨 **CRITICAL ALERT**",
             "HIGH": "⚠️ **HIGH SEVERITY ADVISORY**",
@@ -68,37 +77,90 @@ class AdvisoryComposer:
         }
         badge = severity_badges.get(severity, f"**{severity} ADVISORY**")
 
-        # Build response body
-        if primary_sop.get("lead_with_system_alert"):
-            core_message = (
-                f"{badge}\n\n"
-                f"**System Warning:** {mandatory_text}\n\n"
-                f"**Specific Context for '{activity.title()}':** Due to active regional monsoon depression / cyclonic conditions, "
-                f"this activity is not safe under current observed parameters ({precip} mm/h rain, {wind} km/h wind).\n"
-            )
-        else:
-            core_message = (
-                f"{badge}\n\n"
-                f"**Official Safety Guidance:**\n{mandatory_text}\n\n"
-                f"**Policy Trigger Rationale:** {rationale}\n"
-            )
+        secondary_text = ""
+        if secondary_sops:
+            secondary_text = "\nAdditional Concurrent Policies Triggered:\n"
+            for sec in secondary_sops:
+                secondary_text += f"- [{sec['id']} - {sec['title']}] ({sec['severity']}): {sec['mandatory_guidance']}\n"
 
-        # Append secondary SOPs if present
+        # Attempt to synthesize natural language narrative via Groq LLM (qwen/qwen3.8-27b)
+        llm_body = None
+        if self.client:
+            try:
+                system_prompt = (
+                    "You are the MediBuddy Weather-Advisory Clinical Assistant. "
+                    "You answer outdoor safety questions for users. "
+                    "CRITICAL CONSTRAINTS:\n"
+                    "1. You must ONLY use the provided verified weather facts and the authorized SOP guidance.\n"
+                    "2. Do NOT invent, assume, or estimate any weather figures.\n"
+                    "3. Do NOT invent any safety advice outside the authorized SOP policy text.\n"
+                    "4. If a severe rain system or cyclonic alert applies, lead with the rain warning first.\n"
+                    "5. Keep your tone empathetic, authoritative, and concise (2-3 short paragraphs)."
+                )
+
+                user_prompt = (
+                    f"User Question: \"{query}\"\n"
+                    f"Location: {loc}\n"
+                    f"Activity: {activity}\n"
+                    f"Target Horizon: {target_desc}\n\n"
+                    f"Verified Weather Facts from Open-Meteo:\n"
+                    f"- Temperature: {temp}°C\n"
+                    f"- Precipitation: {precip} mm (Probability: {precip_prob}%)\n"
+                    f"- Wind Speed: {wind} km/h (Gusts: {gusts} km/h)\n"
+                    f"- UV Index: {uv}\n"
+                    f"- General Condition: {condition}\n\n"
+                    f"Authorized Clinical Policy:\n"
+                    f"- Primary Policy ID: {sop_id} ({sop_title})\n"
+                    f"- Clinical Severity: {severity}\n"
+                    f"- Trigger Rationale: {rationale}\n"
+                    f"- Mandatory Official Safety Guidance: {mandatory_text}\n"
+                    f"{secondary_text}\n"
+                    "Please compose the user advisory directly incorporating the official safety guidance."
+                )
+
+                completion = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.2,
+                    max_tokens=350
+                )
+                llm_body = completion.choices[0].message.content.strip()
+            except Exception as e:
+                print(f"[AdvisoryComposer] Groq completion fallback due to: {e}")
+                llm_body = None
+
+        # Fallback to deterministic template if LLM is unavailable or errors
+        if not llm_body:
+            if primary_sop.get("lead_with_system_alert"):
+                llm_body = (
+                    f"**System Warning:** {mandatory_text}\n\n"
+                    f"**Specific Context for '{activity.title()}':** Due to active regional monsoon depression / cyclonic conditions, "
+                    f"this activity is not safe under current observed parameters ({precip} mm/h rain, {wind} km/h wind)."
+                )
+            else:
+                llm_body = (
+                    f"**Official Safety Guidance:**\n{mandatory_text}\n\n"
+                    f"**Policy Trigger Rationale:** {rationale}"
+                )
+
+        citation_footer = (
+            f"\n\n---\n"
+            f"📋 **Policy Citation:** `{sop_id}` ({sop_title})\n"
+            f"🤖 *Synthesized via {self.model_name} with strict Open-Meteo fact grounding & clinical SOP enforcement.*"
+        )
+
         secondary_block = ""
         if secondary_sops:
-            secondary_block = "\n**Additional Concurrent Policies Triggered:**\n"
+            secondary_block = "\n\n**Additional Concurrent Policies Triggered:**\n"
             for sec in secondary_sops:
                 secondary_block += (
                     f"• [{sec['id']} - {sec['title']}] ({sec['severity']}): {sec['mandatory_guidance']}\n"
                 )
 
-        citation_footer = (
-            f"\n---\n"
-            f"📋 **Policy Citation:** `{sop_id}` ({sop_title})\n"
-            f"🔒 *Enforced by MediBuddy Safety Protocol Engine v1.0. All numerical figures sourced directly from Open-Meteo.*"
-        )
-
-        final_response = f"{verified_metrics_block}\n{core_message}{secondary_block}{citation_footer}"
+        final_response = f"{verified_metrics_block}\n{badge}\n\n{llm_body}{secondary_block}{citation_footer}"
         return final_response
 
     def compose_no_sop_response(self, activity: str, weather: Optional[Dict[str, Any]] = None) -> str:

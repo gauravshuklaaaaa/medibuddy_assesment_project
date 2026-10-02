@@ -25,7 +25,7 @@
       "pass_criteria": "Identifies running activity in Delhi without literal keywords 'uv index' or 'workout'.",
       "passed": true,
       "notes": "Extracted location='Delhi', activity='running', status='advisory_generated'. Response successfully grounded.",
-      "output_snippet": "\ud83d\udccd **Verified Live Weather for Delhi** (current observations): \u2022 Condition: Mainly clear \u2022 Temperature: 34.6\u00b0C \u2022 Precipitation: 0.0 mm (Probability: 0.0%) \u2022 Wind Speed: 10.5 km/h (Gusts: 31.0 km/h) \u2022 UV Index: 6.0  \u26a1 **MODERATE CAUTION**  **Official S"
+      "output_snippet": "\ud83d\udccd **Verified Live Weather for Delhi** (current observations): \u2022 Condition: Clear sky \u2022 Temperature: 34.8\u00b0C \u2022 Precipitation: 0.0 mm (Probability: 0.0%) \u2022 Wind Speed: 11.0 km/h (Gusts: 32.0 km/h) \u2022 UV Index: 5.8  \u26a1 **MODERATE CAUTION**  Given the clear"
     },
     {
       "case_id": "CASE-4",
@@ -33,15 +33,15 @@
       "pass_criteria": "Maps 'scooty' to cycling/two-wheeler and evaluates commute risks in Mumbai.",
       "passed": true,
       "notes": "Successfully normalized colloquial 'scooty' to cycling/two-wheeler activity for Mumbai.",
-      "output_snippet": "\ud83d\udccd **Verified Live Weather for Mumbai** (current observations): \u2022 Condition: Light drizzle \u2022 Temperature: 37.0\u00b0C \u2022 Precipitation: 0.1 mm (Probability: 0.0%) \u2022 Wind Speed: 2.8 km/h (Gusts: 23.0 km/h) \u2022 UV Index: 7.6  \u26a1 **MODERATE CAUTION**  **Official "
+      "output_snippet": "\ud83d\udccd **Verified Live Weather for Mumbai** (current observations): \u2022 Condition: Light drizzle \u2022 Temperature: 37.1\u00b0C \u2022 Precipitation: 0.1 mm (Probability: 0.0%) \u2022 Wind Speed: 2.9 km/h (Gusts: 19.4 km/h) \u2022 UV Index: 7.4  \u26a1 **MODERATE CAUTION**  I understan"
     },
     {
       "case_id": "CASE-5",
       "description": "Live Weather Grounding: Bhopal live conditions pulled dynamically from Open-Meteo",
       "pass_criteria": "Must fetch live Open-Meteo data, report real numerical values, and cite an authorized SOP.",
       "passed": true,
-      "notes": "Live Open-Meteo pull successful: Temp=31.6\u00b0C, Wind=6.6 km/h. Sourced from Open-Meteo.",
-      "output_snippet": "\ud83d\udccd **Verified Live Weather for Bhopal** (current observations): \u2022 Condition: Clear sky \u2022 Temperature: 31.6\u00b0C \u2022 Precipitation: 0.0 mm (Probability: 0.0%) \u2022 Wind Speed: 6.6 km/h (Gusts: 18.7 km/h) \u2022 UV Index: 7.5  \u2139\ufe0f **STANDARD ADVISORY / FAVORABLE**  *"
+      "notes": "Live Open-Meteo pull successful: Temp=31.7\u00b0C, Wind=6.8 km/h. Sourced from Open-Meteo.",
+      "output_snippet": "\ud83d\udccd **Verified Live Weather for Bhopal** (current observations): \u2022 Condition: Clear sky \u2022 Temperature: 31.7\u00b0C \u2022 Precipitation: 0.0 mm (Probability: 0.0%) \u2022 Wind Speed: 6.8 km/h (Gusts: 19.1 km/h) \u2022 UV Index: 7.2  \u2139\ufe0f **STANDARD ADVISORY / FAVORABLE**  Y"
     },
     {
       "case_id": "CASE-6",
