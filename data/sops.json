@@ -1,0 +1,418 @@
+[
+  {
+    "id": "SOP-SYS-001",
+    "title": "Active Well-Marked Low-Pressure & Cyclonic Monsoon System Alert",
+    "category": "system_wide_alert",
+    "severity": "CRITICAL",
+    "applies_to_activities": [
+      "all",
+      "cycling",
+      "running",
+      "walking",
+      "sports",
+      "travel",
+      "commute",
+      "picnic",
+      "park",
+      "outdoor"
+    ],
+    "rule_type": "system_override",
+    "description": "Regional low-pressure or cyclonic monsoon depression bringing widespread heavy to very heavy rainfall.",
+    "trigger_conditions": {
+      "min_precipitation": 25.0,
+      "or_conditions": [
+        {
+          "min_precipitation": 15.0,
+          "min_wind_speed": 40.0
+        },
+        {
+          "weather_codes": [
+            95,
+            96,
+            99
+          ]
+        }
+      ],
+      "system_flag": "low_pressure_or_cyclonic_monsoon"
+    },
+    "lead_with_system_alert": true,
+    "mandatory_guidance": "CRITICAL REGIONAL WEATHER SYSTEM ALERT: A well-marked low-pressure/cyclonic monsoon system is actively impacting this area with heavy to very heavy rainfall. Treat all outdoor activities as high hazard. Suspend all non-essential travel, cycling, running, and park outings immediately due to localized flooding, waterlogged roads, and severe squalls.",
+    "required_metrics": [
+      "precipitation",
+      "wind_speed",
+      "weather_code"
+    ]
+  },
+  {
+    "id": "SOP-EX-001",
+    "title": "Extreme Solar Radiation & Midday UV Index Exercise Hazard",
+    "category": "outdoor_exercise",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "cycling",
+      "running",
+      "jogging",
+      "sports",
+      "workout",
+      "exercise",
+      "marathon",
+      "cardio"
+    ],
+    "rule_type": "threshold",
+    "description": "UV index reaches extreme levels (8.0+) between 11:00 and 16:00 during outdoor workouts.",
+    "trigger_conditions": {
+      "min_uv_index": 8.0,
+      "time_window_start_hour": 11,
+      "time_window_end_hour": 16
+    },
+    "mandatory_guidance": "Advise against intense or unprotected outdoor workouts during the midday window (11 AM - 4 PM). Direct exposure creates high risk of severe sunburn, cellular skin damage, and heat exhaustion. Mandate broad-spectrum SPF 50+ sunscreen, UV protective sunglasses, and advise rescheduling strenuous cardio to early morning (before 9 AM) or dusk.",
+    "required_metrics": [
+      "uv_index",
+      "temperature"
+    ]
+  },
+  {
+    "id": "SOP-EX-002",
+    "title": "Squally Winds & Severe Gusts Cycling and Two-Wheeler Danger",
+    "category": "outdoor_exercise",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "cycling",
+      "biking",
+      "two_wheeler",
+      "scooter",
+      "motorcycle",
+      "bicycle"
+    ],
+    "rule_type": "threshold",
+    "description": "Elevated sustained winds or sudden crosswind gusts threatening vehicle stability.",
+    "trigger_conditions": {
+      "min_wind_speed": 38.0,
+      "min_wind_gusts": 48.0
+    },
+    "mandatory_guidance": "Flag cycling, biking, and two-wheeler transit as an acute safety hazard rather than merely an inconvenience. High crosswinds and sudden gusts severely undermine lateral balance and risk throwing riders into adjacent vehicular lanes. Recommend postponing rides or utilizing enclosed 4-wheel vehicular transport.",
+    "required_metrics": [
+      "wind_speed",
+      "wind_gusts"
+    ]
+  },
+  {
+    "id": "SOP-EX-003",
+    "title": "Heavy Downpour & Traction Failure Hazard for Outdoor Sports",
+    "category": "outdoor_exercise",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "cycling",
+      "running",
+      "jogging",
+      "sports",
+      "football",
+      "cricket",
+      "tennis",
+      "hiking"
+    ],
+    "rule_type": "threshold",
+    "description": "Substantial rainfall causing slick roads, poor visibility, and mud slip hazards.",
+    "trigger_conditions": {
+      "min_precipitation": 7.0,
+      "or_precipitation_prob": 80.0
+    },
+    "mandatory_guidance": "Advise against outdoor running, field sports, and trail workouts. Heavy active rainfall compromises braking distances, obscures road hazards and open drains, and creates slick surfaces with acute risk of falls and sprains. Transition workout to an indoor gym or home routine.",
+    "required_metrics": [
+      "precipitation",
+      "precipitation_probability"
+    ]
+  },
+  {
+    "id": "SOP-EX-004",
+    "title": "Elevated Thermal Stress & Dehydration Caution for Exercise",
+    "category": "outdoor_exercise",
+    "severity": "MEDIUM",
+    "applies_to_activities": [
+      "cycling",
+      "running",
+      "jogging",
+      "walking",
+      "sports",
+      "workout"
+    ],
+    "rule_type": "threshold",
+    "description": "Ambient heat between 32\u00b0C and 38\u00b0C imposing thermal stress on cardiovascular systems.",
+    "trigger_conditions": {
+      "min_temperature": 32.0,
+      "max_temperature": 38.0
+    },
+    "mandatory_guidance": "Permit outdoor exercise only with strict heat-mitigation protocols. The high ambient temperature increases core heat storage. Enforce hydration stops with electrolyte replenishment every 15-20 minutes, wear light-colored moisture-wicking fabrics, and reduce workout intensity by 25%.",
+    "required_metrics": [
+      "temperature",
+      "relative_humidity"
+    ]
+  },
+  {
+    "id": "SOP-TR-001",
+    "title": "Dense Fog & Impaired Visibility Commuter Warning",
+    "category": "travel_commute",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "travel",
+      "commute",
+      "driving",
+      "ride",
+      "road",
+      "highway",
+      "transit"
+    ],
+    "rule_type": "threshold",
+    "description": "Severe fog reducing sight distance on roadways.",
+    "trigger_conditions": {
+      "weather_codes": [
+        45,
+        48
+      ],
+      "min_relative_humidity": 92.0,
+      "max_wind_speed": 10.0
+    },
+    "mandatory_guidance": "Issue a high-priority commuter advisory for impaired road visibility. Mandate low-beam headlights and operational hazard lights, curtail driving speeds by at least 40%, and double following distance behind preceding vehicles. Avoid overtaking maneuvers on two-lane undivided roads.",
+    "required_metrics": [
+      "weather_code",
+      "relative_humidity",
+      "wind_speed"
+    ]
+  },
+  {
+    "id": "SOP-TR-002",
+    "title": "Moderate Rain Road Transit Delays & Braking Advisory",
+    "category": "travel_commute",
+    "severity": "MEDIUM",
+    "applies_to_activities": [
+      "travel",
+      "commute",
+      "driving",
+      "road",
+      "bus",
+      "car",
+      "cab"
+    ],
+    "rule_type": "threshold",
+    "description": "Moderate rain leading to water ponding and traffic congestion.",
+    "trigger_conditions": {
+      "min_precipitation": 2.5,
+      "or_precipitation_prob": 60.0
+    },
+    "mandatory_guidance": "Advise commuters to account for urban road delays and reduced tire grip. Anticipate water accumulation at low-lying underpasses and arterial choke points. Add a 30-minute buffer to travel times, ensure wiper blade integrity, and test braking response early on wet tarmac.",
+    "required_metrics": [
+      "precipitation",
+      "precipitation_probability"
+    ]
+  },
+  {
+    "id": "SOP-TR-003",
+    "title": "Gale Force Winds High-Profile Vehicle & Bridge Crossing Risk",
+    "category": "travel_commute",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "travel",
+      "commute",
+      "driving",
+      "highway",
+      "bridge",
+      "truck",
+      "two_wheeler"
+    ],
+    "rule_type": "threshold",
+    "description": "High velocity winds impacting elevated flyovers, expressways, and bridges.",
+    "trigger_conditions": {
+      "min_wind_speed": 45.0
+    },
+    "mandatory_guidance": "Warn motorists and riders crossing exposed flyovers, bridges, and open highways. Gale-force wind velocities exert sudden lateral shear forces capable of destabilizing two-wheelers and high-profile freight vehicles. Restrict two-wheeler travel on coastal bridges and elevated causeways.",
+    "required_metrics": [
+      "wind_speed",
+      "wind_gusts"
+    ]
+  },
+  {
+    "id": "SOP-VG-001",
+    "title": "Extreme Thermal Exposure Risk for Pediatric & Geriatric Populations",
+    "category": "vulnerable_groups",
+    "severity": "HIGH",
+    "applies_to_activities": [
+      "kid",
+      "child",
+      "children",
+      "baby",
+      "infant",
+      "elderly",
+      "senior",
+      "grandparents",
+      "park",
+      "outing"
+    ],
+    "rule_type": "threshold",
+    "description": "Ambient temperature exceeds 38\u00b0C or drops below 8\u00b0C affecting vulnerable thermoregulation.",
+    "trigger_conditions": {
+      "extreme_heat_threshold": 38.0,
+      "extreme_cold_threshold": 8.0
+    },
+    "mandatory_guidance": "Issue a high-severity advisory strictly discouraging outdoor outings for infants, young children, and seniors. Young children have a higher surface-area-to-mass ratio and seniors experience blunted thirst sensation, creating rapid vulnerability to hyperthermia or hypothermia. Relocate activities to climate-controlled indoor spaces.",
+    "required_metrics": [
+      "temperature",
+      "relative_humidity"
+    ]
+  },
+  {
+    "id": "SOP-VG-002",
+    "title": "Hot Surface Thermal Paw Injury & Canine Heatstroke Precaution",
+    "category": "vulnerable_groups",
+    "severity": "MEDIUM",
+    "applies_to_activities": [
+      "pet",
+      "dog",
+      "puppy",
+      "walk",
+      "dog_walking",
+      "cat"
+    ],
+    "rule_type": "threshold",
+    "description": "Asphalt surface heat absorption causing thermal contact burns to pet paw pads.",
+    "trigger_conditions": {
+      "min_temperature": 29.0,
+      "min_uv_index": 5.0
+    },
+    "mandatory_guidance": "Alert pet owners that dark asphalt absorbs radiation and can reach 52\u00b0C+ under direct sunlight, capable of searing canine paw pads in under 60 seconds. Enforce the 7-second bare-hand back-of-hand test on pavement before walking. Restrict walks to natural grass and shaded times (early morning or after dark).",
+    "required_metrics": [
+      "temperature",
+      "uv_index"
+    ]
+  },
+  {
+    "id": "SOP-VG-003",
+    "title": "Oppressive Humidity & Respiratory Strain Caution",
+    "category": "vulnerable_groups",
+    "severity": "LOW",
+    "applies_to_activities": [
+      "kid",
+      "elderly",
+      "walking",
+      "stroll",
+      "park",
+      "asthma",
+      "respiratory"
+    ],
+    "rule_type": "threshold",
+    "description": "High relative humidity combined with warm weather creating oppressive breathing conditions.",
+    "trigger_conditions": {
+      "min_relative_humidity": 82.0,
+      "min_temperature": 28.0
+    },
+    "mandatory_guidance": "Advise caution for seniors and individuals prone to bronchospasms or asthma. Dense, moisture-saturated air impairs natural evaporative cooling and increases airway resistance. Keep outdoor walks leisurely, carry prescribed rescue inhalers, and hydrate frequently.",
+    "required_metrics": [
+      "relative_humidity",
+      "temperature"
+    ]
+  },
+  {
+    "id": "SOP-FZ-001",
+    "title": "Holistic Outdoor Picnic & Park Gathering Suitability Assessment",
+    "category": "leisure_gatherings",
+    "severity": "LOW",
+    "applies_to_activities": [
+      "picnic",
+      "park",
+      "outing",
+      "gathering",
+      "bbq",
+      "lawn",
+      "stroll",
+      "day_out"
+    ],
+    "rule_type": "fuzzy_composite",
+    "description": "Multi-variable qualitative outdoor comfort assessment for picnics and leisure outings without single-variable cliff thresholds.",
+    "trigger_conditions": {
+      "ideal_envelope": {
+        "min_temp": 18.0,
+        "max_temp": 28.0,
+        "max_precipitation": 0.1,
+        "max_wind_speed": 20.0,
+        "max_uv_index": 6.5
+      },
+      "tolerable_envelope": {
+        "min_temp": 15.0,
+        "max_temp": 33.0,
+        "max_precipitation": 1.0,
+        "max_wind_speed": 30.0,
+        "max_uv_index": 8.0
+      }
+    },
+    "mandatory_guidance": "Evaluate picnic feasibility based on composite thermal and environmental comfort rather than a single cutoff. In ideal conditions (mild 18-28\u00b0C, negligible rain, gentle breeze), declare conditions favorable for picnics with basic sun protection. In marginal conditions (breezy, overcast drizzle risk, or warm humidity), recommend portable pop-up canopies, water-resistant ground blankets, and continuous sky monitoring.",
+    "required_metrics": [
+      "temperature",
+      "precipitation",
+      "wind_speed",
+      "uv_index",
+      "relative_humidity"
+    ]
+  },
+  {
+    "id": "SOP-EX-005",
+    "title": "Favorable Baseline Conditions for Outdoor Cardio & Cycling",
+    "category": "outdoor_exercise",
+    "severity": "LOW",
+    "applies_to_activities": [
+      "cycling",
+      "running",
+      "jogging",
+      "walking",
+      "sports",
+      "biking",
+      "two_wheeler"
+    ],
+    "rule_type": "baseline_favorable",
+    "description": "Ambient weather conditions fall within benign, safe ranges for outdoor physical activities.",
+    "trigger_conditions": {
+      "min_temp": 12.0,
+      "max_temp": 32.0,
+      "max_wind_speed": 30.0,
+      "max_precipitation": 1.0,
+      "max_uv_index": 7.9
+    },
+    "mandatory_guidance": "Conditions are favorable for outdoor cardiovascular exercise and cycling. Maintain baseline athletic precautions: equip an approved helmet for cycling, remain vigilant of road traffic, wear breathable attire, and carry standard hydration.",
+    "required_metrics": [
+      "temperature",
+      "wind_speed",
+      "precipitation",
+      "uv_index"
+    ]
+  },
+  {
+    "id": "SOP-TR-004",
+    "title": "Favorable Baseline Roadway & Transit Conditions",
+    "category": "travel_commute",
+    "severity": "LOW",
+    "applies_to_activities": [
+      "travel",
+      "commute",
+      "driving",
+      "road",
+      "transit"
+    ],
+    "rule_type": "baseline_favorable",
+    "description": "Normal road visibility and dry roadway conditions with no adverse meteorological hindrances.",
+    "trigger_conditions": {
+      "max_precipitation": 1.0,
+      "max_wind_speed": 35.0,
+      "excluded_weather_codes": [
+        45,
+        48,
+        95,
+        96,
+        99
+      ]
+    },
+    "mandatory_guidance": "Road transit conditions are clear and favorable. No weather-induced transit delays or surface hazards detected. Observe standard traffic rules and posted speed limits.",
+    "required_metrics": [
+      "precipitation",
+      "wind_speed",
+      "weather_code"
+    ]
+  }
+]
