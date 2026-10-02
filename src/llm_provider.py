@@ -1,5 +1,6 @@
 ﻿"""
 LLM Provider module with Groq (qwen/qwen3.8-27b) integration and strict fact enforcement.
+Supports local .env as well as Streamlit Cloud Secrets (st.secrets).
 Guarantees that numbers and safety advice strictly originate from Open-Meteo and SOP policies.
 """
 
@@ -17,7 +18,16 @@ class AdvisoryComposer:
     """
 
     def __init__(self, model_name: str = "qwen/qwen3.8-27b"):
+        # Check environment first, then fallback to Streamlit Cloud secrets if available
         self.groq_key = os.getenv("GROQ_API_KEY")
+        if not self.groq_key:
+            try:
+                import streamlit as st
+                if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+                    self.groq_key = st.secrets["GROQ_API_KEY"]
+            except Exception:
+                pass
+
         self.model_name = os.getenv("GROQ_MODEL", model_name)
         self.client = None
 
@@ -59,7 +69,6 @@ class AdvisoryComposer:
         mandatory_text = primary_sop["mandatory_guidance"]
         rationale = primary_sop.get("rationale", "")
 
-        # Always build the verified metrics block deterministically (no hallucinations possible)
         verified_metrics_block = (
             f"📍 **Verified Live Weather for {loc}** ({target_desc}):\n"
             f"• Condition: {condition}\n"
@@ -83,7 +92,6 @@ class AdvisoryComposer:
             for sec in secondary_sops:
                 secondary_text += f"- [{sec['id']} - {sec['title']}] ({sec['severity']}): {sec['mandatory_guidance']}\n"
 
-        # Attempt to synthesize natural language narrative via Groq LLM (qwen/qwen3.8-27b)
         llm_body = None
         if self.client:
             try:
@@ -132,7 +140,6 @@ class AdvisoryComposer:
                 print(f"[AdvisoryComposer] Groq completion fallback due to: {e}")
                 llm_body = None
 
-        # Fallback to deterministic template if LLM is unavailable or errors
         if not llm_body:
             if primary_sop.get("lead_with_system_alert"):
                 llm_body = (
