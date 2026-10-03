@@ -1,4 +1,4 @@
-﻿"""
+"""
 LangGraph implementation for the MediBuddy Weather-Advisory Support Bot.
 Implements a true directed state graph with multiple conditional branches,
 multi-turn session memory with MemorySaver, and strict SOP fact grounding.
@@ -82,17 +82,38 @@ def extract_entities(
 
     # 3. Location Extraction
     location = None
+    explicit_candidate = None
 
-    # Step A: Preposition match takes highest priority ("in <City>", "of <City>", "for <City>", "at <City>", "near <City>", "around <City>")
-    matches = list(re.finditer(r'\b(?:in|of|for|at|near|around)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
-    for m in reversed(matches):
-        cand = m.group(1).strip()
-        cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|evening|morning|tomorrow|the\s+park|work|office)\b', '', cand, flags=re.IGNORECASE).strip()
-        if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
+    # Step A: Explicit location prepositions ("in <City>", "at <City>", "near <City>", "around <City>", "of <City>", "for <City>")
+    loc_matches = list(re.finditer(r'\b(in|at|near|around|of|for)\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', query, re.IGNORECASE))
+    for m in reversed(loc_matches):
+        prep = m.group(1).lower()
+        cand = m.group(2).strip()
+
+        # If preposition is 'for', exclude if followed by an activity, article, or non-location phrase
+        if prep == "for":
+            if re.match(r'^(?:a|an|the|\d+|run|running|jog|jogging|walk|walking|cycle|cycling|bike|biking|commute|drive|driving|picnic|exercise|workout|lunch|dinner)\b', cand, re.IGNORECASE):
+                continue
+
+        cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|evening|morning|tomorrow|the\s+park|work|office|home)\b', '', cand, flags=re.IGNORECASE).strip()
+        if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE) and len(cand) > 1:
+            if cand.lower() in ["run", "running", "jog", "jogging", "walk", "walking", "cycle", "cycling", "bike", "commute", "exercise"]:
+                continue
+
+            # Record the first explicit location preposition candidate (e.g. "in AbcDefGhi999Z")
+            if not explicit_candidate and prep in ["in", "at", "near", "around", "of"]:
+                explicit_candidate = cand
+
             res, _ = weather_service.geocode_city(cand)
             if res:
                 location = res["name"]
                 break
+
+    # If an explicit location clause was specified by the user (e.g. "in AbcDefGhi999Z"),
+    # but could not be resolved by geocoding, preserve that candidate directly.
+    # This prevents hallucinating alternative cities or scanning unrelated dictionary words.
+    if not location and explicit_candidate:
+        location = explicit_candidate
 
     # Step B: Direct short response when awaiting location or short query (e.g. "weather of thailand", "of betul", "agra")
     if not location:
@@ -115,14 +136,24 @@ def extract_entities(
             if res:
                 location = res["name"]
 
-    # Step C: Check individual non-stopwords against geocoding
+    # Step C: Check individual non-stopwords against geocoding (only for proper single-word queries)
     if not location:
-        words = [w.strip() for w in re.split(r'[\s,]+', q_clean) if len(w) > 2]
+        words = [w.strip("?,.! ") for w in re.split(r'[\s,]+', q_clean) if len(w) > 2]
         stopwords = {
             "weather", "forecast", "climate", "temperature", "safe", "outside", "outdoor", "activity",
             "today", "tonight", "morning", "evening", "what", "about", "how", "tell", "check", "please",
-            "can", "should", "would", "like", "cycle", "cycling", "bike", "biking", "run", "running",
-            "jog", "jogging", "walk", "walking", "stroll", "ride", "riding", "scooty", "scooter"
+            "can", "should", "would", "could", "will", "shall", "might", "may", "must",
+            "like", "cycle", "cycling", "bike", "biking", "run", "running",
+            "jog", "jogging", "walk", "walking", "stroll", "ride", "riding", "scooty", "scooter",
+            "for", "the", "and", "but", "with", "from", "into", "onto", "out", "over", "under",
+            "all", "any", "some", "our", "you", "your", "they", "them", "this", "that", "there",
+            "here", "where", "when", "which", "who", "whom", "whose", "why", "how", "good",
+            "bad", "hot", "cold", "warm", "cool", "want", "need", "take", "taking", "make",
+            "making", "have", "having", "been", "being", "does", "done", "doing", "just",
+            "very", "much", "more", "most", "also", "even", "ever", "never", "only", "then",
+            "than", "now", "yes", "no", "okay", "sure", "travel", "drive", "driving", "commute",
+            "picnic", "park", "sports", "cricket", "match", "game", "elderly", "children", "baby",
+            "kid", "kids", "senior", "grandparents"
         }
         candidates_from_words = [w for w in words if w.lower() not in stopwords]
         for w in candidates_from_words:
@@ -131,17 +162,7 @@ def extract_entities(
                 location = res["name"]
                 break
 
-    # Step D: Fallback for unresolvable location test cases (like AbcDefGhi999Z)
-    if not location:
-        for m in reversed(matches):
-            cand = m.group(1).strip()
-            cand = re.sub(r'\b(?:today|tonight|now|this\s+evening|tomorrow)\b', '', cand, flags=re.IGNORECASE).strip()
-            if cand and not re.match(r'^\d+\s*(?:am|pm)?$', cand, re.IGNORECASE):
-                if cand.lower() not in ["the morning", "the evening", "the park", "my area", "work", "office", "a park", "the car", "1 pm"]:
-                    location = cand
-                    break
-
-    # Step E: Fall back to session memory location if available
+    # Step D: Fall back to session memory location if available
     if not location and current_loc:
         location = current_loc
 
