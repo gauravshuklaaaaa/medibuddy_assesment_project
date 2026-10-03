@@ -1,52 +1,172 @@
 ﻿# MediBuddy Weather-Advisory Support Bot
 
-An outdoor activity safety advisory assistant backed by a **LangGraph directed state graph with explicit conditional branching**, strictly constrained by an external repository of Standard Operating Procedures (SOPs). The bot provides live weather-grounded recommendations without hallucinating advice or facts, supports multi-turn session memory, includes an automated evaluation suite, an interactive Streamlit frontend, and a PDF project write-up.
+A weather-based outdoor safety assistant built with **LangGraph, Streamlit, and Open-Meteo**.
 
----
+The bot answers questions like:
 
-## 1. Problem Overview & Core Philosophy
+- “Is it safe to cycle today?”
+- “Can I take my kid to the park?”
+- “What about this evening?”
+- “Is this a good day for a picnic?”
 
-Consumers routinely ask safety questions regarding outdoor activities:
-- *"Is it safe to cycle today?"*
-- *"Should I take my kid to the park?"*
-- *"Is this a good day for a picnic?"*
-- *"What about this evening instead?"*
+The main idea is simple: **the bot should never make up weather information or safety advice.**
 
-As a health and wellness platform, MediBuddy must stand legally and clinically behind every statement issued to users. A bot that invents plausible-sounding advice or recalls outdated weather estimates creates genuine real-world safety liability.
+## Live Demo
 
-### Non-Negotiable Tenets:
-1. **Separation of Policy and Code:** All safety recommendations come from a written, authorized policy repository (`data/sops.json`), never from an unconstrained LLM judgment call.
-2. **Zero Hallucination / Fact Grounding:** All meteorological figures (temperature, wind speed, rainfall, UV index) come strictly from live **Open-Meteo** API calls for that specific query.
-3. **Honest Fallbacks:** If a location cannot be resolved, the weather API is unreachable, or no authorized SOP covers the query, the bot states so honestly (`NONE_APPLICABLE`) rather than guessing.
-4. **Live Extensibility:** Reviewers can add an 11th SOP during a live call without touching any Python control-flow code.
+**Streamlit App:**  
+https://gauravshuklaaaaa-medibuddy-assesment-project-app-jndc4c.streamlit.app/
 
----
+## How It Works
 
-## 2. Architecture & LangGraph Branching
+The application uses a LangGraph state graph to process each query:
 
-The bot is implemented using **LangGraph** with a state graph featuring **8 specialized nodes** and **3 conditional routing branches**:
-
-```mermaid
-graph TD
-    Start([User Input]) --> ExtractIntent[1. extract_intent]
-    
-    ExtractIntent --> CheckLocation{Location Found?}
-    CheckLocation -- No --> ClarifyLocation[clarify_location] --> End([Return Response])
-    CheckLocation -- Yes --> FetchWeather[2. fetch_weather]
-    
-    FetchWeather --> CheckWeather{Weather API Ok?}
-    CheckWeather -- Failed --> WeatherFallback[fallback_weather_error] --> End
-    CheckWeather -- Success --> EvaluateSOPs[3. evaluate_sops]
-    
-    EvaluateSOPs --> CheckMatch{Any SOP Matched?}
-    CheckMatch -- No --> NoSOPNode[no_sop 'NONE_APPLICABLE'] --> End
-    CheckMatch -- Yes --> ResolveConflicts[4. conflict_resolution]
-    
-    ResolveConflicts --> GenerateAdvisory[5. generate_advisory] --> End
+```text
+User Query
+    ↓
+Extract Intent
+    ↓
+Check Location
+    ↓
+Fetch Live Weather
+    ↓
+Evaluate SOPs
+    ↓
+Resolve Conflicts
+    ↓
+Generate Advisory
 ```
 
-### Node Descriptions:
-- **`extract_intent`**: Uses word-boundary NLP to extract target location, activity, and time horizon (current, evening, tomorrow). Retains session context across turns (e.g., asking about Bhopal cycling, followed by *"what about this evening instead?"*).
+It remembers context across messages, so a user can ask:
+
+> “Is cycling safe in Bhopal?”
+
+and then:
+
+> “What about this evening?”
+
+without repeating the location.
+
+## SOP-Based Safety
+
+All safety rules are stored in:
+
+```text
+data/sops.json
+```
+
+The LLM does **not** decide whether an activity is safe. Instead, the application checks the live weather against predefined SOP rules.
+
+Examples include:
+
+- High UV → avoid intense midday exercise
+- Strong wind → cycling/two-wheelers may be unsafe
+- Heavy rain → avoid outdoor sports
+- Extreme temperatures → additional precautions for children/seniors
+- Poor weather conditions → travel warnings
+
+This also makes the system easy to update. A new SOP can be added to `sops.json` without changing the core Python logic.
+
+## Weather Data
+
+Weather information comes from the **Open-Meteo API**, including:
+
+- Temperature
+- Rainfall
+- Wind speed
+- Humidity
+- UV index
+- Weather conditions
+
+If the location cannot be found or the weather API fails, the bot gives an honest fallback instead of guessing.
+
+## LangGraph Design
+
+The project uses separate nodes for:
+
+- `extract_intent`
+- `fetch_weather`
+- `evaluate_sops`
+- `conflict_resolution`
+- `generate_advisory`
+- `clarify_location`
+- `fallback_weather_error`
+- `no_sop`
+
+Conditional branches handle cases such as missing locations, API failures, and unmatched SOPs.
+
+When multiple SOPs are triggered, the system prioritizes them based on severity:
+
+```text
+CRITICAL > HIGH > MEDIUM > LOW
+```
+
+Secondary warnings are still shown so that important conditions aren't hidden.
+
+## Evaluation
+
+The project includes an automated evaluation suite covering:
+
+- SOP matching
+- Paraphrased user queries
+- Live weather grounding
+- Missing SOP handling
+- Weather API failure
+- Prompt-injection attempts
+- Multi-turn intent handling
+
+Run:
+
+```bash
+python evals/run_evals.py
+```
+
+Current evaluation result:
+
+**8/8 test cases passed.**
+
+## Run Locally
+
+```bash
+git clone https://github.com/gauravshuklaaaaa/medibuddy_assesment_project.git
+
+cd medibuddy_assesment_project
+
+pip install -r requirements.txt
+
+python evals/run_evals.py
+
+streamlit run app.py
+```
+
+### Requirements
+
+- Python 3.10+
+- Internet connection
+- No Open-Meteo API key required
+
+## Tech Stack
+
+**Python · LangGraph · Streamlit · Open-Meteo API · JSON · NLP**
+
+## Project Structure
+
+```text
+medibuddy_assesment_project/
+│
+├── app.py
+├── data/
+│   └── sops.json
+├── evals/
+│   └── run_evals.py
+├── requirements.txt
+└── generate_pdf_report.py
+```
+
+## Why I Built It
+
+I wanted to build a system where an LLM can handle natural-language conversations while **important safety decisions remain controlled by explicit rules and live data**.
+
+This keeps the system simple, explainable, and easier to maintain.followed by *"what about this evening instead?"*).
 - **`clarify_location`**: Prompt branch when no city or location was provided or retained in memory.
 - **`fetch_weather`**: Resolves city coordinates via Open-Meteo Geocoding, then fetches live observations and hourly forecasts.
 - **`fallback_weather_error`**: Honest failure branch when geocoding fails or Open-Meteo is unreachable.
